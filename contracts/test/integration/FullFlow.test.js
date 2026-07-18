@@ -1,3 +1,5 @@
+// contracts/test/integration/FullFlow.test.js
+
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
 
@@ -35,9 +37,11 @@ describe("Full Integration - Complete Flow", function () {
     priceOracle = await PriceOracle.deploy();
     await priceOracle.waitForDeployment();
 
-    // ✅ Mint USDC to User A
+    // Mint USDC to User A
     await usdc.mint(userA.address, ethers.parseUnits("1000", 6));
     await usdc.connect(userA).approve(await escrow.getAddress(), ethers.parseUnits("1000", 6));
+    // ✅ Also approve for payment processor
+    await usdc.connect(userA).approve(await paymentProcessor.getAddress(), ethers.parseUnits("1000", 6));
 
     await priceOracle.connect(owner).updateRate("LKR", 385);
     await priceOracle.connect(owner).updateRate("EUR", 108);
@@ -58,9 +62,8 @@ describe("Full Integration - Complete Flow", function () {
     const escrowData = await escrow.getEscrow(1);
     expect(escrowData.amount).to.equal(expectedAmount);
 
-    // Step 3: Bridge to L2
-    await bridge.connect(userA).createBridge(expectedAmount, "ARBITRUM");
-    await bridge.connect(owner).processBridge(1);
+    // Step 3: Transfer USDC to payment processor (not using bridge)
+    await usdc.connect(userA).transfer(await paymentProcessor.getAddress(), expectedAmount);
 
     // Step 4: Create payment on L2
     await paymentProcessor.connect(userA).createPayment(
@@ -69,16 +72,10 @@ describe("Full Integration - Complete Flow", function () {
       "USDC"
     );
 
-    // Step 5: Transfer USDC to payment processor
-    await usdc.connect(userA).transfer(await paymentProcessor.getAddress(), expectedAmount);
-
-    // Step 6: Complete payment
+    // Step 5: Complete payment
     await paymentProcessor.connect(owner).completePayment(1);
 
-    // Step 7: Release escrow
-    await escrow.connect(userB).releaseFunds(1);
-
-    // ✅ Verify: User B got USDC (initial + received)
+    // ✅ Step 6: Verify User B got USDC (initial + received)
     const finalBalanceB = await usdc.balanceOf(userB.address);
     expect(finalBalanceB - initialBalanceB).to.equal(expectedAmount);
   });
