@@ -31,6 +31,7 @@ contract Escrow is Ownable, ReentrancyGuard {
         address sender;
         address receiver;
         uint256 amount;
+        uint256 grossAmount;   // original amount (before fee) - ✅ NEW
         uint256 timestamp;
         bool released;
         bool refunded;
@@ -46,6 +47,7 @@ contract Escrow is Ownable, ReentrancyGuard {
 
     mapping(uint256 => EscrowTx) public transactions;
     // ↑ escrowId → EscrowTx (ගනුදෙනු ගබඩාව)
+    mapping(address => uint256[]) public userTransactions;
 
     event EscrowCreated(uint256 indexed id, address sender, address receiver, uint256 amount);
     event EscrowReleased(uint256 indexed id, address receiver, uint256 amount);
@@ -98,11 +100,15 @@ contract Escrow is Ownable, ReentrancyGuard {
             sender: msg.sender,
             receiver: receiver,
             amount: netAmount,
+            grossAmount: amount,
             timestamp: block.timestamp,
             released: false,
             refunded: false
         });
         // ↑ ගනුදෙනුව save කරනවා
+
+        userTransactions[msg.sender].push(transactionCounter);
+        userTransactions[receiver].push(transactionCounter);
 
         if (fee > 0) {
             usdc.transfer(feeRecipient, fee);
@@ -122,7 +128,7 @@ contract Escrow is Ownable, ReentrancyGuard {
         EscrowTx storage escrow = transactions[escrowId];
         // ↑ escrow data එක load කරනවා
 
-        require(escrow.sender == msg.sender || escrow.receiver == msg.sender, "Not authorized");
+        require(msg.sender == escrow.sender || msg.sender == escrow.receiver, "Not authorized");
         // ↑ sender හෝ receiver පමණක් call කළ යුතුයි
 
         require(!escrow.released && !escrow.refunded, "Already processed");
@@ -151,6 +157,12 @@ contract Escrow is Ownable, ReentrancyGuard {
         // ↑ දින 7කට පසුව පමණක් refund කළ හැකියි
 
         escrow.refunded = true;
+        uint256 refundAmount = escrow.grossAmount; // Full original amount
+        
+        // Check if contract has enough balance
+        uint256 contractBalance = usdc.balanceOf(address(this));
+        require(contractBalance >= refundAmount, "Insufficient contract balance");
+        
         usdc.transfer(escrow.sender, escrow.amount);
         // ↑ USDC sender ට ආපසු යවනවා
 
