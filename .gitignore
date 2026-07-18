@@ -19,6 +19,7 @@ yarn.lock
 .env.test.local
 .env.production.local
 contracts/.env
+frontend/.env
 
 # ============================================
 # Build / Dist
