@@ -20,6 +20,7 @@ yarn.lock
 .env.production.local
 contracts/.env
 frontend/.env
+frontend/.env.local
 
 # ============================================
 # Build / Dist
