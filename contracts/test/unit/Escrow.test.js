@@ -99,19 +99,16 @@ describe("Escrow Contract", function () {
     });
   });
 
+// ============================================
+  // REFUND FUNDS TESTS
   // ============================================
-  // RELEASE FUNDS TESTS
-  // ============================================
- describe("refundFunds", function () {
+  describe("refundFunds", function () {
   it("✅ Should refund funds to sender after 7 days", async function () {
     const amount = ethers.parseUnits("100", 6);
-    
-    // Get initial balance
     const initialBalance = await usdc.balanceOf(sender.address);
-    
+
     await escrow.connect(sender).createEscrow(receiver.address, amount);
-    
-    // Fast forward time by 8 days
+
     await ethers.provider.send("evm_increaseTime", [8 * 24 * 60 * 60]);
     await ethers.provider.send("evm_mine", []);
 
@@ -120,114 +117,52 @@ describe("Escrow Contract", function () {
     const escrowData = await escrow.getEscrow(1);
     expect(escrowData.refunded).to.be.true;
 
-    // ✅ FIX: Sender gets netAmount back (fee already paid)
-    // fee = 0.1 USDC, so sender gets 99.9 USDC back
-    // initialBalance = 1000 USDC
-    // sender should have: 1000 - 100 + 99.9 = 999.9 USDC
-    const expectedBalance = initialBalance - amount + (amount - (amount * 10n) / 10000n);
+    // fee එක permanently feeRecipient ට ගිහින් ඉවරයි — ඒ නිසා
+    // sender ට ආපහු එන්නේ (amount - fee) විතරයි, මුළු amount එක නෙවෙයි
+    const fee = (amount * 10n) / 10000n;
+    const expectedBalance = initialBalance - amount + (amount - fee);
     const finalBalance = await usdc.balanceOf(sender.address);
     expect(finalBalance).to.equal(expectedBalance);
+  });
+
+  it("❌ Should fail if not sender", async function () {
+    const amount = ethers.parseUnits("100", 6);
+    await escrow.connect(sender).createEscrow(receiver.address, amount);
+    await ethers.provider.send("evm_increaseTime", [8 * 24 * 60 * 60]);
+    await ethers.provider.send("evm_mine", []);
+    await expect(
+      escrow.connect(receiver).refundFunds(1)
+    ).to.be.revertedWith("Only sender");
+  });
+
+  it("❌ Should fail before 7 days", async function () {
+    const amount = ethers.parseUnits("100", 6);
+    await escrow.connect(sender).createEscrow(receiver.address, amount);
+    await expect(
+      escrow.connect(sender).refundFunds(1)
+    ).to.be.revertedWith("Too early");
+  });
+
+  it("❌ Should fail if already released", async function () {
+    const amount = ethers.parseUnits("100", 6);
+    await escrow.connect(sender).createEscrow(receiver.address, amount);
+    await escrow.connect(receiver).releaseFunds(1);
+    await expect(
+      escrow.connect(sender).refundFunds(1)
+    ).to.be.revertedWith("Already processed");
   });
 
   it("❌ Should fail if already refunded", async function () {
     const amount = ethers.parseUnits("100", 6);
     await escrow.connect(sender).createEscrow(receiver.address, amount);
-    
     await ethers.provider.send("evm_increaseTime", [8 * 24 * 60 * 60]);
     await ethers.provider.send("evm_mine", []);
-    
-    // Refund first
     await escrow.connect(sender).refundFunds(1);
-    
-    // Then try to refund again
     await expect(
       escrow.connect(sender).refundFunds(1)
     ).to.be.revertedWith("Already processed");
   });
 });
-
-  // ============================================
-  // REFUND FUNDS TESTS
-  // ============================================
-  describe("refundFunds", function () {
-    it("✅ Should refund funds to sender after 7 days", async function () {
-      const amount = ethers.parseUnits("100", 6);
-      
-      // Get initial balance
-      const initialBalance = await usdc.balanceOf(sender.address);
-      
-      await escrow.connect(sender).createEscrow(receiver.address, amount);
-      
-      // Fast forward time by 8 days
-      await ethers.provider.send("evm_increaseTime", [8 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
-
-      const tx = await escrow.connect(sender).refundFunds(1);
-      await tx.wait();
-
-      const escrowData = await escrow.getEscrow(1);
-      expect(escrowData.refunded).to.be.true;
-
-      // Check sender got FULL amount back (including fee)
-      // Since fee was sent to feeRecipient, sender gets full amount back
-      const finalBalance = await usdc.balanceOf(sender.address);
-      expect(finalBalance).to.equal(initialBalance);
-    });
-
-    it("❌ Should fail if not sender", async function () {
-      const amount = ethers.parseUnits("100", 6);
-      await escrow.connect(sender).createEscrow(receiver.address, amount);
-      
-      await ethers.provider.send("evm_increaseTime", [8 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
-
-      // Receiver tries to refund (should fail)
-      await expect(
-        escrow.connect(receiver).refundFunds(1)
-      ).to.be.revertedWith("Only sender");
-    });
-
-    it("❌ Should fail before 7 days", async function () {
-      const amount = ethers.parseUnits("100", 6);
-      await escrow.connect(sender).createEscrow(receiver.address, amount);
-      
-      // Try to refund immediately (should fail)
-      await expect(
-        escrow.connect(sender).refundFunds(1)
-      ).to.be.revertedWith("Too early");
-    });
-
-    it("❌ Should fail if already released", async function () {
-      const amount = ethers.parseUnits("100", 6);
-      await escrow.connect(sender).createEscrow(receiver.address, amount);
-      
-      // Release first
-      await escrow.connect(receiver).releaseFunds(1);
-      
-      // Then try to refund (should fail)
-      await expect(
-        escrow.connect(sender).refundFunds(1)
-      ).to.be.revertedWith("Already processed");
-    });
-
-    it("❌ Should fail if already refunded", async function () {
-      const amount = ethers.parseUnits("100", 6);
-      await escrow.connect(sender).createEscrow(receiver.address, amount);
-      
-      // Fast forward time by 8 days
-      await ethers.provider.send("evm_increaseTime", [8 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
-      
-      // Refund first
-      await escrow.connect(sender).refundFunds(1);
-      
-      // Then try to refund again (should fail)
-      await expect(
-        escrow.connect(sender).refundFunds(1)
-      ).to.be.revertedWith("Already processed");
-    });
-  });
-
   // ============================================
   // FEE TESTS
   // ============================================
