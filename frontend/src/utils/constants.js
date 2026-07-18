@@ -3,15 +3,13 @@ export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || '';
 
 export const CONTRACTS = {
   ESCROW: process.env.NEXT_PUBLIC_ESCROW_ADDRESS || '',
+  BRIDGE: process.env.NEXT_PUBLIC_BRIDGE_ADDRESS || '',
   PAYMENT_PROCESSOR: process.env.NEXT_PUBLIC_PAYMENT_PROCESSOR_ADDRESS || '',
   PRICE_ORACLE: process.env.NEXT_PUBLIC_PRICE_ORACLE_ADDRESS || '',
   USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS || '',
 };
 
-// USDC uses 6 decimals, matching MockUSDC.sol
 export const USDC_DECIMALS = 6;
-
-// 0.1%, mirrors the FEE constant in Escrow.sol (10 / 10000)
 export const ESCROW_FEE_BPS = 10;
 
 export const SUPPORTED_CURRENCIES = [
