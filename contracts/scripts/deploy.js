@@ -4,7 +4,7 @@ async function main() {
   const [deployer] = await hre.ethers.getSigners();
   console.log("Deploying with account:", deployer.address);
 
-  const USDC_ADDRESS = "0x56e50e81AC7639AA4D67dC445b3c3b765eC3A9d9";
+  const USDC_ADDRESS = "0x20c86C0491E97C0603D41AF6ED951A6aCD77a14E";
   const FEE_RECIPIENT = deployer.address;
 
   // Deploy Escrow
