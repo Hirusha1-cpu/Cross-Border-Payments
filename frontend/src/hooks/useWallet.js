@@ -9,18 +9,32 @@ export function useWallet() {
   const [connecting, setConnecting] = useState(false);
   const [error, setError] = useState(null);
 
+  
   const refreshBalance = useCallback(async (addr) => {
-    if (!addr || !window.ethereum || !CONTRACTS.USDC) return;
+    // ✅ Check if address is valid
+    if (!addr || !window.ethereum || !CONTRACTS.USDC) {
+      console.log('Missing: address, ethereum, or USDC address');
+      return;
+    }
+
     try {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const usdc = new ethers.Contract(CONTRACTS.USDC, ERC20_ABI, provider);
+      
+      // ✅ Validate USDC address before using
+      let usdcAddress = CONTRACTS.USDC;
+      if (!ethers.utils.isAddress(usdcAddress)) {
+        console.error('Invalid USDC address:', usdcAddress);
+        return;
+      }
+
+      const usdc = new ethers.Contract(usdcAddress, ERC20_ABI, provider);
       const bal = await usdc.balanceOf(addr);
       setBalance(bal);
     } catch (err) {
-      // Non-fatal — balance display just stays empty until next refresh
       console.error('Failed to fetch USDC balance', err);
     }
   }, []);
+
 
   const connect = useCallback(async () => {
     if (!window.ethereum) {

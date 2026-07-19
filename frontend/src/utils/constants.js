@@ -1,12 +1,24 @@
+import { ethers } from 'ethers';
+
 export const CHAIN_ID = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 11155111);
 export const RPC_URL = process.env.NEXT_PUBLIC_RPC_URL || '';
 
 export const CONTRACTS = {
-  ESCROW: process.env.NEXT_PUBLIC_ESCROW_ADDRESS || '',
-  BRIDGE: process.env.NEXT_PUBLIC_BRIDGE_ADDRESS || '',
-  PAYMENT_PROCESSOR: process.env.NEXT_PUBLIC_PAYMENT_PROCESSOR_ADDRESS || '',
-  PRICE_ORACLE: process.env.NEXT_PUBLIC_PRICE_ORACLE_ADDRESS || '',
-  USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS || '',
+  ESCROW: process.env.NEXT_PUBLIC_ESCROW_ADDRESS 
+    ? ethers.utils.getAddress(process.env.NEXT_PUBLIC_ESCROW_ADDRESS) 
+    : '',
+  BRIDGE: process.env.NEXT_PUBLIC_BRIDGE_ADDRESS 
+    ? ethers.utils.getAddress(process.env.NEXT_PUBLIC_BRIDGE_ADDRESS) 
+    : '',
+  PAYMENT_PROCESSOR: process.env.NEXT_PUBLIC_PAYMENT_PROCESSOR_ADDRESS 
+    ? ethers.utils.getAddress(process.env.NEXT_PUBLIC_PAYMENT_PROCESSOR_ADDRESS) 
+    : '',
+  PRICE_ORACLE: process.env.NEXT_PUBLIC_PRICE_ORACLE_ADDRESS 
+    ? ethers.utils.getAddress(process.env.NEXT_PUBLIC_PRICE_ORACLE_ADDRESS) 
+    : '',
+  USDC: process.env.NEXT_PUBLIC_USDC_ADDRESS 
+    ? ethers.utils.getAddress(process.env.NEXT_PUBLIC_USDC_ADDRESS) 
+    : '',
 };
 
 export const USDC_DECIMALS = 6;
